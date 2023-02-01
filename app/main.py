@@ -4,11 +4,23 @@ import asyncio
 HOST = 'localhost'
 PORT = 6379
 BUF_SIZE_IN_BYTES = 1024
+RESP_DELIMITER = b'\r\n'
 
 
-def simpleString(s):
-    return str.encode('+' + s + '\r\n')
+def simpleString(s : str) -> bytes:
+    return ('+' + s + '\r\n').encode()
 
+def bulkString(s : str) -> bytes:
+    return ('$' + str(len(s)) + '\r\n' + s + '\r\n').encode()
+
+def respLen(s : bytes) -> int:
+    return int(s.split(RESP_DELIMITER)[0].decode()[1:])
+
+def respCmd(s : bytes) -> str:
+    return s.split(RESP_DELIMITER)[2].decode()
+
+def respArg(s : bytes) -> str:
+    return s.split(RESP_DELIMITER)[4].decode()
 
 async def handler(reader, writer):
     print(f'Connection from: {writer.get_extra_info("peername")}')
@@ -16,7 +28,16 @@ async def handler(reader, writer):
         data = (await reader.read(BUF_SIZE_IN_BYTES))
         if len(data) == 0:
             break
-        writer.write(simpleString('PONG'))
+        
+        cmd = respCmd(data)
+
+        if cmd == 'ECHO':
+            writer.write(bulkString(respArg(data)))
+        else:
+            if respLen(data) == 1:
+                writer.write(simpleString('PONG'))
+            else:
+                writer.write(bulkString(respArg(data)))
     writer.close()
 
 
