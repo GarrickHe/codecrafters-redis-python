@@ -6,6 +6,8 @@ PORT = 6379
 BUF_SIZE_IN_BYTES = 1024
 RESP_DELIMITER = b'\r\n'
 
+cache = {}
+
 
 def simpleString(s : str) -> bytes:
     return ('+' + s + '\r\n').encode()
@@ -22,6 +24,20 @@ def respCmd(s : bytes) -> str:
 def respArg(s : bytes) -> str:
     return s.split(RESP_DELIMITER)[4].decode()
 
+def getKey(s : bytes) -> str:
+    return s.split(RESP_DELIMITER)[4].decode()
+
+def getVal(s : bytes) -> str:
+    return s.split(RESP_DELIMITER)[6].decode()
+
+def setKeyVal(key : str, val : str) -> str:
+    ret = cache[key] if key in cache else ""
+    cache[key] = val
+    return ret
+
+def getKey(key : str) -> str:
+    return cache[key] if key in cache else ""
+
 async def handler(reader, writer):
     print(f'Connection from: {writer.get_extra_info("peername")}')
     while True:
@@ -33,11 +49,17 @@ async def handler(reader, writer):
 
         if cmd == 'ECHO':
             writer.write(bulkString(respArg(data)))
-        else:
+        elif cmd == 'PING':
             if respLen(data) == 1:
                 writer.write(simpleString('PONG'))
             else:
                 writer.write(bulkString(respArg(data)))
+        elif cmd == 'GET':
+            writer.write(bulkString(getKey(getKey(data))))
+        elif cmd == 'SET':
+            ret = setKeyVal(getKey(data), getVal(data))
+            if len(ret) == 0:
+                writer.write(simpleString('OK'))
     writer.close()
 
 
