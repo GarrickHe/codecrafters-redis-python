@@ -45,7 +45,7 @@ async def handler(reader, writer):
         if len(data) == 0:
             break
         
-        cmd = respCmd(data)
+        cmd =  respCmd(data).upper()
 
         if cmd == 'ECHO':
             writer.write(bulkString(respArg(data)))
