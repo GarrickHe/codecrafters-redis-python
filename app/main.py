@@ -40,9 +40,11 @@ def getKey(key : str) -> str:
 
 async def handler(reader, writer):
     print(f'Connection from: {writer.get_extra_info("peername")}')
-    
-    data = (await reader.read(BUF_SIZE_IN_BYTES))
-    if len(data) != 0:
+    while True:
+        data = (await reader.read(BUF_SIZE_IN_BYTES))
+        if len(data) == 0:
+            break
+        
         cmd = respCmd(data)
 
         if cmd == 'ECHO':
